@@ -73,9 +73,12 @@ gcc -pthread leitores_escritores.c -o leitores
 
 ./leitores 3 2 (numero de leitores/numero de escritores)
 
+
 -Jantar dos Filósofos
 
+
 gcc -pthread filosofos.c -o filosofos
+
 
 ./filosofos 5 (numero de filósofos)
 
