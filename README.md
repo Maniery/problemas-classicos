@@ -88,3 +88,41 @@ gcc -pthread filosofos.c -o filosofos
 ./filosofos 5 (numero de filósofos)
 
 
+⚠️ Impacto da Sincronização com Semáforos POSIX
+Antes da implementação com semáforos POSIX, os três códigos apresentavam problemas sérios de concorrência devido à ausência de mecanismos de controle de acesso a dados compartilhados. A seguir, descreve-se a situação anterior e os efeitos da sincronização aplicada.
+
+1. Buffer Limitado (buffer.c)
+Antes: Produtores e consumidor acessavam o buffer simultaneamente, causando condições de corrida, como sobrescrita de posições já preenchidas ou consumo de posições vazias.
+
+Depois: Com semáforos mutex, cheio e vazio, foi possível garantir:
+
+Exclusão mútua no acesso ao buffer;
+
+Espera adequada por espaço ou itens disponíveis;
+
+Eliminação completa de conflitos entre produtores e consumidor.
+
+2. Leitores e Escritores (leitores_escritores.c)
+Antes: Escritores podiam modificar o dado compartilhado enquanto leitores estavam lendo, o que resultava em leitura de dados inconsistentes. Além disso, a variável readcount era manipulada sem proteção, levando a resultados indeterminados.
+
+Depois: Com os semáforos mutex e wrt:
+
+Leitores podem acessar simultaneamente com segurança;
+
+Escritores obtêm exclusividade total de acesso;
+
+O acesso a readcount é protegido, evitando corrupção de estado interno;
+
+As condições de sincronização estão plenamente atendidas.
+
+3. Jantar dos Filósofos (filosofos.c)
+Antes: Não havia nenhum mecanismo real de exclusão mútua para os garfos. Filósofos podiam pegar o mesmo garfo simultaneamente, causando inconsistência, deadlock e inanição.
+
+Depois: Com o uso de semáforos individuais por garfo e a estratégia de alternância (pares pegam um garfo antes dos ímpares e vice-versa):
+
+Garante-se que apenas um filósofo por vez segure cada garfo;
+
+Deadlocks são evitados de forma efetiva;
+
+A solução respeita os princípios da exclusão mútua e progresso.
+
