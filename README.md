@@ -65,7 +65,7 @@ Certifique-se de ter o compilador gcc com suporte a POSIX threads (-pthread).
 -Buffer Limitado
 
 
-gcc -pthread buffer.c -o buffer
+gcc -pthread buffer_posix.c -o buffer
 
 
 ./buffer 5 3 (tamanho do buffer/numero de produtores)
