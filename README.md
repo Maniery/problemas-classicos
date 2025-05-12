@@ -1,4 +1,5 @@
 Tarefa 1.1 – DCT2101: Sistemas Operacionais
+
 📌 Objetivo
 Esta atividade implementa soluções com semáforos POSIX para três problemas clássicos de sincronização de processos:
 
