@@ -51,8 +51,11 @@ Leitores: se o primeiro leitor entra, bloqueia escritores. O último a sair libe
 Escritores: aguardam wrt para acesso exclusivo ao dado compartilhado.
 
 3. Jantar dos Filósofos – filosofos.c
+
 Semáforos usados:
+
 Vetor sem_t garfos[N] – Um semáforo para cada garfo
+
 Funcionamento:
 Filósofos pares pegam primeiro o garfo à esquerda, depois o da direita.
 Filósofos ímpares pegam primeiro o da direita, depois o da esquerda.
