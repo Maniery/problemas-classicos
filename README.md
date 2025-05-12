@@ -62,15 +62,21 @@ Isso evita deadlock, pois quebra a ordem uniforme de aquisição de recursos.
 Certifique-se de ter o compilador gcc com suporte a POSIX threads (-pthread).
 
 -Buffer Limitado
+
 gcc -pthread buffer.c -o buffer
+
 ./buffer 5 3 (tamanho do buffer/numero de produtores)
 
 -Leitores e Escritores
+
 gcc -pthread leitores_escritores.c -o leitores
+
 ./leitores 3 2 (numero de leitores/numero de escritores)
 
 -Jantar dos Filósofos
+
 gcc -pthread filosofos.c -o filosofos
+
 ./filosofos 5 (numero de filósofos)
 
 
