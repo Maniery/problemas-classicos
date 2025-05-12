@@ -1,0 +1,139 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <time.h>
+#include <pthread.h>
+#include <semaphore.h>
+
+int readcount = 0;
+int shared = 0;
+
+// Semáforos
+sem_t mutex;
+sem_t wrt;
+
+// Protótipos
+void *leitor(void *);
+void *escritor(void *);
+int gera_rand(int);
+
+int main(int argc, char **argv)
+{
+    pthread_t *tl, *te;
+    long i;
+
+    srand(time(NULL));
+
+    if (argc < 3)
+    {
+        printf("Usage: %s num_leitores num_escritores\n", argv[0]);
+        return 0;
+    }
+
+    int N_LEITORES = atoi(argv[1]);
+    int N_ESCRITORES = atoi(argv[2]);
+
+    // Inicialização dos semáforos
+    sem_init(&mutex, 0, 1);
+    sem_init(&wrt, 0, 1);
+
+    tl = malloc(N_LEITORES * sizeof(pthread_t));
+    te = malloc(N_ESCRITORES * sizeof(pthread_t));
+
+    for (i = 0; i < N_LEITORES; i++)
+        pthread_create(&tl[i], NULL, leitor, (void *)i);
+
+    for (i = 0; i < N_ESCRITORES; i++)
+        pthread_create(&te[i], NULL, escritor, (void *)i);
+
+    for (i = 0; i < N_LEITORES; i++)
+        pthread_join(tl[i], NULL);
+
+    for (i = 0; i < N_ESCRITORES; i++)
+        pthread_join(te[i], NULL);
+
+    // Destruição dos semáforos
+    sem_destroy(&mutex);
+    sem_destroy(&wrt);
+
+    free(tl);
+    free(te);
+
+    return 0;
+}
+
+void *leitor(void *id)
+{
+    usleep(gera_rand(1000000));
+
+    long i = (long)id;
+    int shared_in;
+
+    printf("> Leitor %ld tentando acesso\n", i);
+
+    // Entrada do leitor
+    sem_wait(&mutex);
+    readcount++;
+    if (readcount == 1)
+        sem_wait(&wrt);  // primeiro leitor bloqueia escritores
+    sem_post(&mutex);
+
+    // Seção crítica de leitura
+    printf("> Leitor %ld acessando\n", i);
+    shared_in = shared;
+    usleep(gera_rand(1000000));
+    printf("> Leitor %ld - tmp: %d - shared: %d - readcount: %d\n",
+           i, shared_in, shared, readcount);
+
+    if (shared_in != shared)
+    {
+        printf("==== ALERTA DO LEITOR %ld ====\n", i);
+        printf("Valor interno diferente do compartilhado\n");
+    }
+
+    // Saída do leitor
+    sem_wait(&mutex);
+    readcount--;
+    if (readcount == 0)
+        sem_post(&wrt);  // último leitor libera escritores
+    sem_post(&mutex);
+
+    printf("< Leitor %ld liberou acesso\n", i);
+
+    return NULL;
+}
+
+void *escritor(void *id)
+{
+    usleep(gera_rand(1000000));
+
+    long i = (long)id;
+    int rnd;
+
+    printf("+ Escritor %ld tentando acesso\n", i);
+    sem_wait(&wrt);  // espera até poder escrever
+
+    printf("+ Escritor %ld conseguiu acesso\n", i);
+
+    if (readcount > 0)
+    {
+        printf("==== ALERTA DO ESCRITOR ====\n");
+        printf("Readcount possui valor: %d\n", readcount);
+    }
+
+    rnd = gera_rand(100);
+    printf("+ Escritor %ld gravando o valor %d em shared\n", i, rnd);
+    usleep(gera_rand(1000000));
+    shared = rnd;
+
+    sem_post(&wrt);  // libera acesso
+
+    printf("+ Escritor %ld saiu\n", i);
+    return NULL;
+}
+
+int gera_rand(int limit)
+{
+    return rand() % limit;
+}
