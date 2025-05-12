@@ -1,86 +1,161 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <time.h>
+#include <pthread.h>
 #include <semaphore.h>
 
-sem_t *garfos;
+//
+// TODO: Definição dos semáforos (variaveis precisam ser globais)
+//
+sem_t *semaforos;
+
+// lista quem esta de posse de um chopstick
+int *chopstick_use;
+
+// numero de filosofos
 int N_FILOS;
 
-void *filosofo(void *);
+// prototipos das funcoes
+void * filosofo(void *);
+void pegar(int, int);
+void liberar(int, int);
 int gera_rand(int);
 
-int main(int argc, char **argv) {
-    pthread_t *tids;
+int main(int argc, char ** argv)
+{
+    // threads dos filosofos
+    pthread_t * tids;
+
     long i;
-
-    if (argc < 2) {
-        printf("Usage: %s num_filosofos\n", argv[0]);
-        return 0;
-    }
-
-    N_FILOS = atoi(argv[1]);
-
-    // Verificação de entrada mínima
-    if (N_FILOS < 2) {
-        printf("Número de filósofos deve ser pelo menos 2 para simulação.\n");
-        return 1;
-    }
 
     srand(time(NULL));
 
-    // Inicializa os semáforos dos garfos
-    garfos = malloc(N_FILOS * sizeof(sem_t));
-    for (i = 0; i < N_FILOS; i++)
-        sem_init(&garfos[i], 0, 1);
-
-    // Cria as threads dos filósofos
+    if ( argc < 2 )
+    {
+        printf("Usage: %s num_filosofos\n", argv[0]);
+        return 0;
+    }
+    
+    // numero de filosofos
+    N_FILOS = atoi(argv[1]);
+    
+    // gerando uma lista de threads de filosofos
     tids = malloc(N_FILOS * sizeof(pthread_t));
+
+    // gerando uma lista de uso dos chopsticks
+    chopstick_use = malloc(N_FILOS * sizeof(int));
+    
+    // um chopstick esta livre se estiver -1
     for (i = 0; i < N_FILOS; i++)
+    {
+        chopstick_use[i] = -1;
+    }
+
+    //
+    // TODO: Criação dos semáforos (aqui é quando define seus
+    // valores)
+    // 
+    semaforos = malloc(N_FILOS * sizeof(sem_t));
+    for (i = 0; i < N_FILOS; i++)
+    {
+        sem_init(&semaforos[i], 0, 1);
+    }
+ 
+    // iniciando as threads dos filosofos
+    for (i = 0; i < N_FILOS; i++)
+    {
         pthread_create(&tids[i], NULL, filosofo, (void *)i);
+    }
+    
+    // aguardando as threads dos filosofos terminarem
     for (i = 0; i < N_FILOS; i++)
+    {
         pthread_join(tids[i], NULL);
-
-    // Destroi os semáforos
+    }
+    
+    //
+    // TODO: Excluindo os semaforos
+    // 
     for (i = 0; i < N_FILOS; i++)
-        sem_destroy(&garfos[i]);
+    {
+        sem_destroy(&semaforos[i]);
+    }
+    free(semaforos);
 
-    free(garfos);
+    // liberando a memoria alocada
     free(tids);
+
     return 0;
 }
 
-void *filosofo(void *id) {
+void * filosofo(void * id)
+{
+    // convertendo o Id do filosofo para int
     long i = (long)id;
-    int esq = i;
-    int dir = (i + 1) % N_FILOS;
-
-    printf("Filosofo %ld pensando\n", i);
+    
+    printf("\t> Filosofo %d pensando\n",i);
     usleep(gera_rand(1000000));
 
-    if (i % 2 == 0) {
-        sem_wait(&garfos[esq]);
-        printf("Filosofo %ld pegou garfo esquerdo (%d)\n", i, esq);
-        sem_wait(&garfos[dir]);
-        printf("Filosofo %ld pegou garfo direito (%d)\n", i, dir);
-    } else {
-        sem_wait(&garfos[dir]);
-        printf("Filosofo %ld pegou garfo direito (%d)\n", i, dir);
-        sem_wait(&garfos[esq]);
-        printf("Filosofo %ld pegou garfo esquerdo (%d)\n", i, esq);
+    // ordem dos chopsticks depende do id  
+    int c1, c2;
+
+    // OBS: alterando a ordem de pegar o chopstick para evitar deadlock
+    if (i%2 == 0) // com base no id do filosofo (par ou impar)
+    {
+        c1 = i;             // esquerda
+        c2 = (i+1)%N_FILOS; // direita
+    }
+    else
+    {
+        c1 = (i+1)%N_FILOS; // direita
+        c2 = i;             // esquerda 
     }
 
-    printf("Filosofo %ld comendo\n", i);
+    //
+    // TODO: precisa garantir que mais de um filosofo nao pegue o mesmo
+    // chopstick simultaneamente
+    //
+    sem_wait(&semaforos[c1]);
+    pegar(i, c1);
+    sem_wait(&semaforos[c2]);
+    pegar(i, c2);
+    
+    printf("\t> Filosofo %d comendo\n",i);
     usleep(gera_rand(1000000));
-
-    sem_post(&garfos[esq]);
-    sem_post(&garfos[dir]);
-
-    printf("Filosofo %ld terminou de comer\n", i);
-    return NULL;
+    
+    //
+    // TODO: precisa garantir que os filosofos liberem os chopsticks
+    // após usar
+    //
+    liberar(i, c1);
+    sem_post(&semaforos[c1]);
+    liberar(i, c2);
+    sem_post(&semaforos[c2]);
 }
 
-int gera_rand(int limit) {
-    return rand() % limit;
+// filosofo 'i' quer pegar o chopstick definido por 'num'
+void pegar(int i, int num)
+{
+    if (chopstick_use[num] != -1)
+    {
+        printf("===== ALERTA DO FILOSOFO %d =====\n===== CHOPSTICK[%d] EM USO POR %d =====\n",
+                i,num,chopstick_use[num]);
+    }
+    chopstick_use[num] = i;
+    printf("+ Filosofo %d pegou o chopstick[%d]\n",i,num);
+}
+
+// filosofo 'i' quer liberar o chopstick definido por 'num'
+void liberar(int i, int num)
+{
+    chopstick_use[num] = -1;
+    printf("- Filosofo %d liberou o chopstick[%d]\n",i,num);
+}
+
+int gera_rand(int limit)
+{
+    // 0 a (limit -1)
+    return rand()%limit;
 }
