@@ -10,6 +10,7 @@ Problema dos Leitores e Escritores
 Problema do Jantar dos Filósofos
 
 📁 Estrutura dos Arquivos
+
 buffer.c – Implementação do buffer limitado com semáforos POSIX
 
 leitores_escritores.c – Solução com múltiplos leitores e escritores
